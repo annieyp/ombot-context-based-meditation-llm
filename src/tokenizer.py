@@ -1,60 +1,55 @@
 
 """
-Includes functions used to tokenize the prompts.
+Includes functions used to tokenize prompts.
 """
-
-def tokenize(prompt):
+def tokenize(prompt, prompt_only_length=None):
     result = tokenizer(
         prompt,
         truncation=True,
         max_length=512,
         padding="max_length",
     )
-    result["labels"] = result["input_ids"].copy()
+    labels = result["input_ids"].copy()
+    if prompt_only_length is not None:
+        #for PyTorch's CrossEntropyLoss, -100 is the default ignore index
+        #so we ignore the prompt part of the input when calculating loss
+        labels[:prompt_only_length] = [-100] * prompt_only_length 
+    result["labels"] = labels
     return result
 
 def generate_and_tokenize_prompt(data_point):
-    full_prompt = f"""You are OmBot, a meditation coach specialized in guiding users 
+    instructions = """You are OmBot, a meditation coach specialized in guiding users 
     through meditation sessions tailored to their emotional states. Your goal is to 
     provide calming, personalized instructions based on the user's context, mood, and 
     experience level. Offer grounding techniques, breathing exercises, and mindfulness
     practices suited to their situation.
 
     ### User experience level:
-    {data_point["user_experience_level"]}
+    {experience}
 
     ### Context:
-    {data_point["context"]}
+    {context}
 
     ### User prompt:
-    {data_point["user_prompt"]}
+    {prompt}
 
     ### Suggested techniques:
-    {data_point["suggested_techniques"]}
+    {techniques}
 
     ### Meditation style:
-    {data_point["meditation_style"]}
+    {style}
 
     ### Guidance:
-    {data_point["meditation_guidance"]}
     """
-    return tokenize(full_prompt)
 
-def generate_and_tokenize_prompt(data_point: dict) -> dict:
-    """
-    Tokenize a training example, masking the loss so the model only
-    learns to predict the guidance text, not the prompt template itself.
-    """
-    prompt_only = build_prompt(data_point["context"], data_point["user_prompt"])
-    full_prompt = build_prompt(
-        data_point["context"], data_point["user_prompt"], data_point["meditation_guidance"]
+    prompt_only = instructions.format(
+        experience=data_point["user_experience_level"],
+        context=data_point["context"],
+        prompt=data_point["user_prompt"],
+        techniques=data_point["suggested_techniques"],
+        style=data_point["meditation_style"],
     )
+    full_prompt = prompt_only + data_point["meditation_guidance"]
 
-    tokenized_full = tokenizer(full_prompt, truncation=True, max_length=512, padding=False)
     prompt_len = len(tokenizer(prompt_only, truncation=True, max_length=512)["input_ids"])
-
-    labels = tokenized_full["input_ids"].copy()
-    labels[:prompt_len] = [-100] * prompt_len  # mask prompt tokens from the loss
-
-    tokenized_full["labels"] = labels
-    return tokenized_full
+    return tokenize(full_prompt, prompt_only_length=prompt_len)
