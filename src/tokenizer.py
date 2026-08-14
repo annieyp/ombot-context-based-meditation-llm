@@ -6,7 +6,7 @@ def tokenize(prompt, prompt_only_length=None):
     result = tokenizer(
         prompt,
         truncation=True,
-        max_length=512,
+        max_length=400,
         padding="max_length",
     )
     labels = result["input_ids"].copy()
@@ -17,32 +17,33 @@ def tokenize(prompt, prompt_only_length=None):
     result["labels"] = labels
     return result
 
-def generate_and_tokenize_prompt(data_point):
-    instructions = """You are OmBot, a meditation coach specialized in guiding users 
-    through meditation sessions tailored to their emotional states. Your goal is to 
-    provide calming, personalized instructions based on the user's context, mood, and 
-    experience level. Offer grounding techniques, breathing exercises, and mindfulness
-    practices suited to their situation.
+INSTRUCTIONS_TEMPLATE = """You are OmBot, a meditation coach specialized in guiding users
+through meditation sessions tailored to their emotional states. Your goal is to
+provide calming, personalized instructions based on the user's context, mood, and
+experience level. Offer grounding techniques, breathing exercises, and mindfulness
+practices suited to their situation.
 
-    ### User experience level:
-    {experience}
+### User experience level:
+{experience}
 
-    ### Context:
-    {context}
+### Context:
+{context}
 
-    ### User prompt:
-    {prompt}
+### User prompt:
+{prompt}
 
-    ### Suggested techniques:
-    {techniques}
+### Suggested techniques:
+{techniques}
 
-    ### Meditation style:
-    {style}
+### Meditation style:
+{style}
 
-    ### Guidance:
-    """
+### Guidance:
+"""
 
-    prompt_only = instructions.format(
+def build_prompt(data_point):
+    """Returns (prompt_only, full_prompt) for a dataset row."""
+    prompt_only = INSTRUCTIONS_TEMPLATE.format(
         experience=data_point["user_experience_level"],
         context=data_point["context"],
         prompt=data_point["user_prompt"],
@@ -50,6 +51,9 @@ def generate_and_tokenize_prompt(data_point):
         style=data_point["meditation_style"],
     )
     full_prompt = prompt_only + data_point["meditation_guidance"]
+    return prompt_only, full_prompt
 
-    prompt_len = len(tokenizer(prompt_only, truncation=True, max_length=512)["input_ids"])
+def generate_and_tokenize_prompt(data_point):
+    prompt_only, full_prompt = build_prompt(data_point)
+    prompt_len = len(tokenizer(prompt_only, truncation=True, max_length=400)["input_ids"])
     return tokenize(full_prompt, prompt_only_length=prompt_len)

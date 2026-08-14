@@ -1,0 +1,13 @@
+FROM ./ombot-q4_k_m.gguf
+
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+PARAMETER stop "<|end|>"
+
+# No SYSTEM field and a raw-passthrough TEMPLATE: the model was trained on
+# a single flat string (see tokenizer.py's generate_and_tokenize_prompt),
+# not Phi-3's <|system|>/<|user|>/<|assistant|> chat turns. The caller is
+# responsible for building that same flat string (experience/context/
+# prompt/techniques/style fields) and sending it as the prompt, so
+# training-time and inference-time formatting stay identical.
+TEMPLATE """{{ .Prompt }}"""
