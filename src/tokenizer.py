@@ -2,7 +2,7 @@
 """
 Includes functions used to tokenize prompts.
 """
-def tokenize(prompt, prompt_only_length=None):
+def tokenize(tokenizer, prompt, prompt_only_length=None):
     result = tokenizer(
         prompt,
         truncation=True,
@@ -53,7 +53,7 @@ def build_prompt(data_point):
     full_prompt = prompt_only + data_point["meditation_guidance"]
     return prompt_only, full_prompt
 
-def generate_and_tokenize_prompt(data_point):
+def generate_and_tokenize_prompt(data_point, tokenizer):
     prompt_only, full_prompt = build_prompt(data_point)
     prompt_len = len(tokenizer(prompt_only, truncation=True, max_length=400)["input_ids"])
-    return tokenize(full_prompt, prompt_only_length=prompt_len)
+    return tokenize(tokenizer, full_prompt, prompt_only_length=prompt_len)
